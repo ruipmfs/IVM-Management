@@ -19,6 +19,138 @@ app = Flask(__name__)
 def home():
     return render_template("index.html")
 
+@app.route("/add_or_remove_retailer/")
+def add_or_remove_retailer():
+    return render_template("add_or_remove_retailer.html")
+
+@app.route("/insert_tin_to_add/", methods=["POST", "GET"])
+def insert_tin_to_add():
+    if request.method == "POST":
+        tin = request.form["tin"]
+        nome = request.form["nome"]
+        return redirect(url_for("add_retailer", tin=tin, nome=nome))
+    else:
+        return render_template("insert_tin_to_add.html")
+
+@app.route("/insert_tin_to_remove/", methods=["POST", "GET"])
+def insert_tin_to_remove():
+    if request.method == "POST":
+        tin = request.form["input"]
+        return redirect(url_for("remove_retailer", tin=tin))
+    else:
+        return render_template("insert_tin_to_remove.html")
+
+@app.route("/remove_retailer/<tin>")
+def remove_retailer(tin):
+    return f"<h1>{tin}</h1>"
+
+@app.route("/add_retailer/<tin>&<nome>")
+def add_retailer(tin, nome):
+    dbConn=None
+    cursor=None
+
+    try:
+        dbConn = psycopg2.connect(DB_CONNECTION_STRING)
+        cursor = dbConn.cursor(cursor_factory = psycopg2.extras.DictCursor)
+        query = "SELECT * FROM evento_reposicao e WHERE e.num_serie = {n_serie};".format(n_serie = nserie)
+        cursor.execute(query)
+        rowcount=cursor.rowcount
+        html = '''
+        <!DOCTYPE html>
+        <style>
+        body {
+            font-family: Montserrat;
+            margin: 0;
+        }
+        /* Header/Logo Title */
+        .header {
+          padding: 15px;
+          text-align: left;
+          background: #55BCC9;
+          color: white;
+          font-size: 15px;
+        }
+
+        /* Page Content */
+        .content {padding:20px;}
+
+        .button {
+          border: none;
+          color: white;
+          padding: 15px 50px;
+          text-align: center;
+          text-decoration: none;
+          display: inline-block;
+          font-size: 16px;
+          margin: 4px 2px;
+          cursor: pointer;
+          border-radius: 5px;
+        }
+
+        .logo {float:right}
+
+        .button1 {background-color: #4CAF50;} /* Green */
+        .button2 {background-color: #55BCC9;} /* Blue */
+        </style>
+        <html>
+            <head>
+                <meta charset="utf-8">
+                <title>List of categories - Python </title>
+            </head>
+            <div class="header">
+                <h1>Databases Project - Delivery 3</h1>
+            </div>
+            <div class="content">
+                <h1>Lista de Eventos de Reposição</h1>
+                <body style="padding:20px" >
+                    <table border="5" cellspacing="5" style="background-color:#FFFFFF;">
+                        <th style="background-color: #55BCC9; width: 500px; text-align: center;" colspan="7"><strong><span style="color: #ffffff;">Lista de Eventos de Reposição da IVM</span></strong></th>
+                        <tbody>
+                          <tr>
+                            <th>EAN</th>
+                            <th>nro</th>
+                            <th>n_serie</th>
+                            <th>fabricante</th>
+                            <th>instante</th>
+                            <th>unidades</th>
+                            <th>TIN</th>
+                          </tr>
+        '''
+
+        for record in cursor:
+            html += f'''
+                    <tr>
+                        <td>{record[0]}</td>
+                        <td>{record[1]}</td>
+                        <td>{record[2]}</td>
+                        <td>{record[3]}</td>
+                        <td>{record[4]}</td>
+                        <td>{record[5]}</td>
+                        <td>{record[6]}</td>
+                    </tr>
+            '''
+        html += '''
+                        </tbody>
+                    </table>
+                </body>
+            </div>
+            <div>
+                <br />
+                <button class="button button2" onclick="document.location='../../app.cgi/'">Voltar</button>
+            </div>
+        </html>
+        '''
+
+        return render_template("success.html")
+    except Exception as e:
+        return str(e) ## Renders a page with the error.
+    finally:
+        cursor.close()
+        dbConn.close()
+
+    return render_template("success.html")
+
+
 @app.route("/insert_nserie_ivm/", methods=["POST", "GET"])
 def insert_nserie_ivm():
     if request.method == "POST":
@@ -84,7 +216,7 @@ def list_replenishment_events_from_ivm(nserie):
                 <h1>Databases Project - Delivery 3</h1>
             </div>
             <div class="content">
-                <h1>Lista de Sub-Categorias de uma Super-Categoria</h1>
+                <h1>Lista de Eventos de Reposição</h1>
                 <body style="padding:20px" >
                     <table border="5" cellspacing="5" style="background-color:#FFFFFF;">
                         <th style="background-color: #55BCC9; width: 500px; text-align: center;" colspan="7"><strong><span style="color: #ffffff;">Lista de Eventos de Reposição da IVM</span></strong></th>
