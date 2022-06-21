@@ -52,95 +52,10 @@ def add_retailer(tin, nome):
     try:
         dbConn = psycopg2.connect(DB_CONNECTION_STRING)
         cursor = dbConn.cursor(cursor_factory = psycopg2.extras.DictCursor)
-        query = "SELECT * FROM evento_reposicao e WHERE e.num_serie = {n_serie};".format(n_serie = nserie)
+        query = "INSERT INTO retalhista(tin, name) VALUES ({tin}, '{nome}');".format(tin = tin, nome = nome)
         cursor.execute(query)
+        dbConn.commit()
         rowcount=cursor.rowcount
-        html = '''
-        <!DOCTYPE html>
-        <style>
-        body {
-            font-family: Montserrat;
-            margin: 0;
-        }
-        /* Header/Logo Title */
-        .header {
-          padding: 15px;
-          text-align: left;
-          background: #55BCC9;
-          color: white;
-          font-size: 15px;
-        }
-
-        /* Page Content */
-        .content {padding:20px;}
-
-        .button {
-          border: none;
-          color: white;
-          padding: 15px 50px;
-          text-align: center;
-          text-decoration: none;
-          display: inline-block;
-          font-size: 16px;
-          margin: 4px 2px;
-          cursor: pointer;
-          border-radius: 5px;
-        }
-
-        .logo {float:right}
-
-        .button1 {background-color: #4CAF50;} /* Green */
-        .button2 {background-color: #55BCC9;} /* Blue */
-        </style>
-        <html>
-            <head>
-                <meta charset="utf-8">
-                <title>List of categories - Python </title>
-            </head>
-            <div class="header">
-                <h1>Databases Project - Delivery 3</h1>
-            </div>
-            <div class="content">
-                <h1>Lista de Eventos de Reposição</h1>
-                <body style="padding:20px" >
-                    <table border="5" cellspacing="5" style="background-color:#FFFFFF;">
-                        <th style="background-color: #55BCC9; width: 500px; text-align: center;" colspan="7"><strong><span style="color: #ffffff;">Lista de Eventos de Reposição da IVM</span></strong></th>
-                        <tbody>
-                          <tr>
-                            <th>EAN</th>
-                            <th>nro</th>
-                            <th>n_serie</th>
-                            <th>fabricante</th>
-                            <th>instante</th>
-                            <th>unidades</th>
-                            <th>TIN</th>
-                          </tr>
-        '''
-
-        for record in cursor:
-            html += f'''
-                    <tr>
-                        <td>{record[0]}</td>
-                        <td>{record[1]}</td>
-                        <td>{record[2]}</td>
-                        <td>{record[3]}</td>
-                        <td>{record[4]}</td>
-                        <td>{record[5]}</td>
-                        <td>{record[6]}</td>
-                    </tr>
-            '''
-        html += '''
-                        </tbody>
-                    </table>
-                </body>
-            </div>
-            <div>
-                <br />
-                <button class="button button2" onclick="document.location='../../app.cgi/'">Voltar</button>
-            </div>
-        </html>
-        '''
-
         return render_template("success.html")
     except Exception as e:
         return str(e) ## Renders a page with the error.
@@ -149,7 +64,6 @@ def add_retailer(tin, nome):
         dbConn.close()
 
     return render_template("success.html")
-
 
 @app.route("/insert_nserie_ivm/", methods=["POST", "GET"])
 def insert_nserie_ivm():
@@ -167,7 +81,7 @@ def list_replenishment_events_from_ivm(nserie):
     try:
         dbConn = psycopg2.connect(DB_CONNECTION_STRING)
         cursor = dbConn.cursor(cursor_factory = psycopg2.extras.DictCursor)
-        query = "SELECT * FROM evento_reposicao e WHERE e.num_serie = {n_serie};".format(n_serie = nserie)
+        query = "SELECT tin , SUM(unidades),cat FROM evento_reposicao inner join produto on evento_reposicao.ean = produto.ean WHERE num_serie = {n_serie} GROUP BY tin, cat;".format(n_serie = nserie)
         cursor.execute(query)
         rowcount=cursor.rowcount
         html = '''
@@ -222,13 +136,9 @@ def list_replenishment_events_from_ivm(nserie):
                         <th style="background-color: #55BCC9; width: 500px; text-align: center;" colspan="7"><strong><span style="color: #ffffff;">Lista de Eventos de Reposição da IVM</span></strong></th>
                         <tbody>
                           <tr>
-                            <th>EAN</th>
-                            <th>nro</th>
-                            <th>n_serie</th>
-                            <th>fabricante</th>
-                            <th>instante</th>
-                            <th>unidades</th>
                             <th>TIN</th>
+                            <th>Categoria</th>
+                            <th>Nº Unidades</th>
                           </tr>
         '''
 
@@ -236,12 +146,8 @@ def list_replenishment_events_from_ivm(nserie):
             html += f'''
                     <tr>
                         <td>{record[0]}</td>
-                        <td>{record[1]}</td>
                         <td>{record[2]}</td>
-                        <td>{record[3]}</td>
-                        <td>{record[4]}</td>
-                        <td>{record[5]}</td>
-                        <td>{record[6]}</td>
+                        <td>{record[1]}</td>
                     </tr>
             '''
         html += '''
