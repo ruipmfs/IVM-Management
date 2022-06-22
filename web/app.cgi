@@ -52,8 +52,8 @@ def add_retailer(tin, nome):
     try:
         dbConn = psycopg2.connect(DB_CONNECTION_STRING)
         cursor = dbConn.cursor(cursor_factory = psycopg2.extras.DictCursor)
-        query = "INSERT INTO retalhista(tin, name) VALUES ({tin}, '{nome}');".format(tin = tin, nome = nome)
-        cursor.execute(query)
+        query = "INSERT INTO retalhista(tin, name) VALUES (%s, %s);"
+        cursor.execute(query, (tin, nome))
         dbConn.commit()
         rowcount=cursor.rowcount
         return render_template("success.html")
@@ -81,8 +81,8 @@ def list_replenishment_events_from_ivm(nserie):
     try:
         dbConn = psycopg2.connect(DB_CONNECTION_STRING)
         cursor = dbConn.cursor(cursor_factory = psycopg2.extras.DictCursor)
-        query = "SELECT tin , SUM(unidades),cat FROM evento_reposicao inner join produto on evento_reposicao.ean = produto.ean WHERE num_serie = {n_serie} GROUP BY tin, cat;".format(n_serie = nserie)
-        cursor.execute(query)
+        query = "SELECT tin , SUM(unidades),cat FROM evento_reposicao inner join produto on evento_reposicao.ean = produto.ean WHERE num_serie = %s GROUP BY tin, cat;"
+        cursor.execute(query, (nserie,))
         rowcount=cursor.rowcount
         html = '''
         <!DOCTYPE html>
@@ -188,8 +188,8 @@ def list_subcat_from_supercat(super_cat):
     try:
         dbConn = psycopg2.connect(DB_CONNECTION_STRING)
         cursor = dbConn.cursor(cursor_factory = psycopg2.extras.DictCursor)
-        query = "SELECT categoria FROM tem_outra WHERE super_categoria LIKE '{cat}';".format(cat = super_cat)
-        cursor.execute(query)
+        query = "SELECT categoria FROM tem_outra WHERE super_categoria LIKE %s;"
+        cursor.execute(query, (super_cat,))
         rowcount=cursor.rowcount
         html = '''
         <!DOCTYPE html>
