@@ -50,10 +50,13 @@ body {
 <div class="content">
   <h1>Inserir um Retalhista</h1>
   	<form action="#" method="post">
-		<p>Insira o Nome da Sub-Categoria a Inserir</p>
+		<p>Insira o Nome da Sub-Categoria e da sua Categoria (pai) a Inserir</p>
     <br>
-    <p>Nome:</p>
-		<p><input type="text" name="nome" /></p>
+    <p>Categoria Pai:</p>
+		<p><input type="text" name="super_nome" /></p>
+    <br>
+    <p>Sub-Categoria:</p>
+    <p><input type="text" name="sub_nome" /></p>
     <br>
   	<button class="button button2" onclick="document.location='../'">Voltar</button>
 </div>

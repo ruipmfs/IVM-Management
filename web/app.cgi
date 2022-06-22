@@ -19,6 +19,100 @@ app = Flask(__name__)
 def home():
     return render_template("index.html")
 
+@app.route("/insert_category_to_add/", methods=["POST", "GET"])
+def insert_category_to_add():
+    if request.method == "POST":
+        nome = request.form["nome"]
+        return redirect(url_for("add_category", nome=nome))
+    else:
+        return render_template("insert_category_to_add.html")
+
+@app.route("/add_category/<nome>")
+def add_category(nome):
+    dbConn=None
+    cursor=None
+
+    try:
+        dbConn = psycopg2.connect(DB_CONNECTION_STRING)
+        cursor = dbConn.cursor(cursor_factory = psycopg2.extras.DictCursor)
+        query = "..."
+        cursor.execute(query, (tin, nome))
+        dbConn.commit()
+        rowcount=cursor.rowcount
+        return render_template("success.html")
+    except Exception as e:
+        return str(e) ## Renders a page with the error.
+    finally:
+        cursor.close()
+        dbConn.close()
+
+    return render_template("success.html")
+
+@app.route("/insert_subcategory_to_add/", methods=["POST", "GET"])
+def insert_subcategory_to_add():
+    if request.method == "POST":
+        super_nome = request.form["super_nome"]
+        sub_nome = request.form["sub_nome"]
+        return redirect(url_for("add_subcategory", super_nome=super_nome, sub_nome=sub_nome))
+    else:
+        return render_template("insert_subcategory_to_add.html")
+
+@app.route("/add_subcategory/<super_nome>&<sub_nome>")
+def add_subcategory(super_nome, sub_nome):
+    dbConn=None
+    cursor=None
+
+    try:
+        dbConn = psycopg2.connect(DB_CONNECTION_STRING)
+        cursor = dbConn.cursor(cursor_factory = psycopg2.extras.DictCursor)
+        supercat_existent = 0
+
+        existent_super_cat = "SELECT nome FROM super_categoria WHERE nome = %s;"
+        cursor.execute(existent_super_cat, (super_nome,))
+        result = cursor.fetchall()
+
+        for row in result:
+            for value in row:
+                if value == super_nome:
+                    supercat_existent = 1
+
+        if supercat_existent == 0:
+            query1 = "DELETE FROM categoria_simples WHERE nome = %s;"
+            query2 = "INSERT INTO categoria VALUES (%s);"
+            query3 = "INSERT INTO categoria VALUES (%s);"
+            query4 = "INSERT INTO categoria_simples VALUES (%s);"
+            query5 = "INSERT INTO super_categoria VALUES (%s);"
+            query6 = "INSERT INTO tem_outra VALUES (%s, %s);"
+            cursor.execute(query1, (super_nome,))
+            cursor.execute(query2, (sub_nome,))
+            cursor.execute(query3, (super_nome,))
+            cursor.execute(query4, (sub_nome,))
+            cursor.execute(query5, (super_nome,))
+            cursor.execute(query6, (super_nome, sub_nome))
+            dbConn.commit()
+
+        else:
+            query1 = "INSERT INTO categoria VALUES (%s);"
+            query2 = "INSERT INTO categoria_simples VALUES (%s);"
+            query3 = "INSERT INTO tem_outra VALUES (%s, %s);"
+            cursor.execute(query1, (sub_nome,))
+            cursor.execute(query2, (sub_nome,))
+            cursor.execute(query3, (super_nome, sub_nome))
+            dbConn.commit()
+
+        return render_template("success.html")
+    except Exception as e:
+        return str(e) ## Renders a page with the error.
+    finally:
+        cursor.close()
+        dbConn.close()
+
+    return render_template("success.html")
+
+@app.route("/add_or_remove_category/")
+def add_or_remove_category():
+    return render_template("add_or_remove_category.html")
+
 @app.route("/add_or_remove_retailer/")
 def add_or_remove_retailer():
     return render_template("add_or_remove_retailer.html")
@@ -188,7 +282,7 @@ def list_subcat_from_supercat(super_cat):
     try:
         dbConn = psycopg2.connect(DB_CONNECTION_STRING)
         cursor = dbConn.cursor(cursor_factory = psycopg2.extras.DictCursor)
-        query = "SELECT categoria FROM tem_outra WHERE super_categoria LIKE %s;"
+        query = "WITH RECURSIVE super AS ( SELECT categoria FROM tem_outra c WHERE super_categoria = %s UNION SELECT cat.categoria FROM tem_outra cat, super WHERE cat.super_categoria = super.categoria) SELECT * FROM super;"
         cursor.execute(query, (super_cat,))
         rowcount=cursor.rowcount
         html = '''
@@ -240,7 +334,7 @@ def list_subcat_from_supercat(super_cat):
                 <h1>Lista de Sub-Categorias de uma Super-Categoria</h1>
                 <body style="padding:20px" >
                     <table border="5" cellspacing="5" style="background-color:#FFFFFF;">
-                        <th style="background-color: #55BCC9; width: 500px; text-align: center;" colspan="5"><strong><span style="color: #ffffff;">List of Categories</span></strong></th>
+                        <th style="background-color: #55BCC9; width: 500px; text-align: center;" colspan="5"><strong><span style="color: #ffffff;">Super-Categoria '''+ super_cat +'''</span></strong></th>
                         <tbody>
         '''
 
