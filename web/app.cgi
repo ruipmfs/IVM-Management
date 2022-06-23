@@ -219,7 +219,47 @@ def insert_tin_to_remove():
 
 @app.route("/remove_retailer/<tin>")
 def remove_retailer(tin):
-    return f"<h1>{tin}</h1>"
+    dbConn=None
+    cursor=None
+
+    try:
+        dbConn = psycopg2.connect(DB_CONNECTION_STRING)
+        cursor = dbConn.cursor(cursor_factory = psycopg2.extras.DictCursor)
+        produto_retalhista = "SELECT ean FROM produto WHERE cat IN (SELECT nome_cat FROM responsavel_por WHERE tin = %s);"
+        cursor.execute(produto_retalhista, (tin,))
+        result = cursor.fetchall()
+
+        #remover retalhista
+        query_retalhista_1 = "DELETE FROM evento_reposicao WHERE tin = %s;"
+        query_retalhista_2 = "DELETE FROM responsavel_por WHERE tin = %s;"
+        query_retalhista_3 = "DELETE FROM retalhista WHERE tin = %s;"
+
+        cursor.execute(query_retalhista_1, (tin,))
+        cursor.execute(query_retalhista_2, (tin,))
+        cursor.execute(query_retalhista_3, (tin,))
+
+
+        for ean in result:
+
+            #remover produto 
+            query_produto_1 = "DELETE FROM evento_reposicao WHERE ean = %s;"
+            query_produto_2 = "DELETE FROM planograma WHERE ean = %s;"
+            query_produto_3 = "DELETE FROM tem_categoria WHERE ean = %s;"
+            query_produto_4 = "DELETE FROM produto WHERE ean = %s;"
+            cursor.execute(query_produto_1, (ean[0],))
+            cursor.execute(query_produto_2, (ean[0],))
+            cursor.execute(query_produto_3, (ean[0],))
+            cursor.execute(query_produto_4, (ean[0],))
+
+        return render_template("success.html")
+    except Exception as e:
+        return str(e) ## Renders a page with the error.
+    finally:
+        dbConn.commit()
+        cursor.close()
+        dbConn.close()
+
+    return render_template("success.html")
 
 @app.route("/add_retailer/<tin>&<nome>")
 def add_retailer(tin, nome):
@@ -244,23 +284,24 @@ def add_retailer(tin, nome):
 
 ## Listar todos os Eventos de Reposição de uma IVM
 
-@app.route("/insert_nserie_ivm/", methods=["POST", "GET"])
-def insert_nserie_ivm():
+@app.route("/insert_nserie_manufacturer_ivm/", methods=["POST", "GET"])
+def insert_nserie_manufacturer_ivm():
     if request.method == "POST":
-        nserie = request.form["input"]
-        return redirect(url_for("list_replenishment_events_from_ivm", nserie=nserie))
+        nserie = request.form["nserie"]
+        manufacturer = request.form["manufacturer"]
+        return redirect(url_for("list_replenishment_events_from_ivm", nserie=nserie, manufacturer=manufacturer))
     else:
-        return render_template("insert_nserie_ivm.html")
+        return render_template("insert_nserie_manufacturer_ivm.html")
 
-@app.route("/list_replenishment_events_from_ivm/<nserie>")
-def list_replenishment_events_from_ivm(nserie):
+@app.route("/list_replenishment_events_from_ivm/<nserie>&<manufacturer>")
+def list_replenishment_events_from_ivm(nserie, manufacturer):
     dbConn=None
     cursor=None
 
     try:
         dbConn = psycopg2.connect(DB_CONNECTION_STRING)
         cursor = dbConn.cursor(cursor_factory = psycopg2.extras.DictCursor)
-        query = "SELECT tin , SUM(unidades),cat FROM evento_reposicao inner join produto on evento_reposicao.ean = produto.ean WHERE num_serie = %s GROUP BY tin, cat;"
+        query = "SELECT tin , SUM(unidades),cat FROM evento_reposicao NATURAL JOIN produto NATURAL JOIN IVM WHERE num_serie = 0 AND fabricante LIKE 'Augusto' GROUP BY tin, cat;"
         cursor.execute(query, (nserie,))
         rowcount=cursor.rowcount
         html = '''
