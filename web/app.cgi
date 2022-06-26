@@ -15,18 +15,20 @@ DB_CONNECTION_STRING = "host=%s dbname=%s user=%s password=%s" % (DB_HOST, DB_DA
 
 app = Flask(__name__)
 
-## MAIN PAGE
+# MAIN PAGE
 
 @app.route("/")
 def home():
     return render_template("index.html")
 
-## Inserir/Remover Categorias e Sub-Categorias
+# Inserir/Remover Categorias e Sub-Categorias
 
+## Route em que o utilizador escolhe se quer adicionar ou remover uma categoria
 @app.route("/add_or_remove_category/")
 def add_or_remove_category():
     return render_template("add_or_remove_category.html")
 
+## Route em que o utilizador insere o nome da categoria a adicionar
 @app.route("/insert_category_to_add/", methods=["POST", "GET"])
 def insert_category_to_add():
     if request.method == "POST":
@@ -35,6 +37,7 @@ def insert_category_to_add():
     else:
         return render_template("insert_category_to_add.html")
 
+## Route de processamento de dados (inserção da categoria na tabela)
 @app.route("/add_category/<nome>")
 def add_category(nome):
     dbConn=None
@@ -43,8 +46,10 @@ def add_category(nome):
     try:
         dbConn = psycopg2.connect(DB_CONNECTION_STRING)
         cursor = dbConn.cursor(cursor_factory = psycopg2.extras.DictCursor)
-        query = "..."
-        cursor.execute(query, (tin, nome))
+        query1 = "INSERT INTO categoria (nome) VALUES (%s);"
+        query2 = "INSERT INTO categoria_simples (nome) VALUES (%s);"
+        cursor.execute(query1, (nome,))
+        cursor.execute(query2, (nome,))
         dbConn.commit()
         rowcount=cursor.rowcount
         return render_template("success.html")
@@ -56,6 +61,7 @@ def add_category(nome):
 
     return render_template("success.html")
 
+## Route em que o utilizador insere o nome da sub-categoria a adicionar
 @app.route("/insert_subcategory_to_add/", methods=["POST", "GET"])
 def insert_subcategory_to_add():
     if request.method == "POST":
@@ -65,6 +71,7 @@ def insert_subcategory_to_add():
     else:
         return render_template("insert_subcategory_to_add.html")
 
+## Route de processamento de dados (inserção da sub-categoria e a sua super-categoria na tabela)
 @app.route("/add_subcategory/<super_nome>&<sub_nome>")
 def add_subcategory(super_nome, sub_nome):
     dbConn=None
@@ -79,11 +86,13 @@ def add_subcategory(super_nome, sub_nome):
         cursor.execute(existent_super_cat, (super_nome,))
         result = cursor.fetchall()
 
+        # Verifica se a super categoria inserida já existe
         for row in result:
             for value in row:
                 if value == super_nome:
                     supercat_existent = 1
 
+        # Se não existir, cria uma nova e associa a nova sub-categoria
         if supercat_existent == 0:
             query1 = "DELETE FROM categoria_simples WHERE nome = %s;"
             query2 = "INSERT INTO categoria VALUES (%s);"
@@ -99,6 +108,7 @@ def add_subcategory(super_nome, sub_nome):
             cursor.execute(query6, (super_nome, sub_nome))
             dbConn.commit()
 
+        # Se existir, associa só a sub-categoria
         else:
             query1 = "INSERT INTO categoria VALUES (%s);"
             query2 = "INSERT INTO categoria_simples VALUES (%s);"
@@ -117,6 +127,7 @@ def add_subcategory(super_nome, sub_nome):
 
     return render_template("success.html")
 
+## Route em que o utilizador insere o nome da categoria a remover
 @app.route("/insert_category_to_remove/", methods=["POST", "GET"])
 def insert_category_to_remove():
     if request.method == "POST":
@@ -125,6 +136,7 @@ def insert_category_to_remove():
     else:
         return render_template("insert_category_to_remove.html")
 
+## Route de processamento de dados (remoção da categoria na tabela)
 @app.route("/remove_category/<category>")
 def remove_category(category):
     dbConn=None
@@ -138,16 +150,17 @@ def remove_category(category):
         cursor.execute(existent_super_cat, (category,))
         result = cursor.fetchall()
 
+        # Verifica se a super categoria inserida já existe
         for row in result:
             for value in row:
                 if value == category:
                     supercat_existent = 1
 
+        # Se existir
         if supercat_existent:
             query = "WITH RECURSIVE super AS ( SELECT categoria FROM tem_outra c WHERE super_categoria = %s UNION SELECT cat.categoria FROM tem_outra cat, super WHERE cat.super_categoria = super.categoria) SELECT * FROM super;"
             cursor.execute(query, (category,))
-            result = cursor.fetchall()
-            result += [(category,)]
+            result = [(category,)] + cursor.fetchall()
         else:
             result = [(category,)]
 
@@ -194,12 +207,14 @@ def remove_category(category):
 
     return render_template("success.html")
 
-## Inserir/Remover um Retalhista (e todos os seus Produtos)
+# Inserir/Remover um Retalhista (e todos os seus Produtos)
 
+## Route em que o utilizador escolhe se quer adicionar ou remover um retalhista
 @app.route("/add_or_remove_retailer/")
 def add_or_remove_retailer():
     return render_template("add_or_remove_retailer.html")
 
+## Route em que o utilizador insere o TIN e o nome do retalhista a adicionar
 @app.route("/insert_tin_to_add/", methods=["POST", "GET"])
 def insert_tin_to_add():
     if request.method == "POST":
@@ -209,6 +224,7 @@ def insert_tin_to_add():
     else:
         return render_template("insert_tin_to_add.html")
 
+## Route em que o utilizador insere o TIN do retalhista a remover
 @app.route("/insert_tin_to_remove/", methods=["POST", "GET"])
 def insert_tin_to_remove():
     if request.method == "POST":
@@ -217,6 +233,7 @@ def insert_tin_to_remove():
     else:
         return render_template("insert_tin_to_remove.html")
 
+## Route de processamento de dados (remoção do retalhista na tabela)
 @app.route("/remove_retailer/<tin>")
 def remove_retailer(tin):
     dbConn=None
@@ -261,6 +278,7 @@ def remove_retailer(tin):
 
     return render_template("success.html")
 
+## Route de processamento de dados (adição do retalhista na tabela)
 @app.route("/add_retailer/<tin>&<nome>")
 def add_retailer(tin, nome):
     dbConn=None
@@ -282,8 +300,9 @@ def add_retailer(tin, nome):
 
     return render_template("success.html")
 
-## Listar todos os Eventos de Reposição de uma IVM
+# Listar todos os Eventos de Reposição de uma IVM
 
+## Route em que o utilizador insere o n de serie e o fabricante da IVM
 @app.route("/insert_nserie_manufacturer_ivm/", methods=["POST", "GET"])
 def insert_nserie_manufacturer_ivm():
     if request.method == "POST":
@@ -293,6 +312,7 @@ def insert_nserie_manufacturer_ivm():
     else:
         return render_template("insert_nserie_manufacturer_ivm.html")
 
+## Route em que lista todos os Eventos de Reposicao da IVM
 @app.route("/list_replenishment_events_from_ivm/<nserie>&<manufacturer>")
 def list_replenishment_events_from_ivm(nserie, manufacturer):
     dbConn=None
@@ -391,8 +411,9 @@ def list_replenishment_events_from_ivm(nserie, manufacturer):
 
     return html
 
-## Listar todas as Sub-categorias de uma Super-categoria
+# Listar todas as Sub-categorias de uma Super-categoria
 
+## Route em que o utilizador insere o nome da super categoria
 @app.route("/insert_supercat/", methods=["POST", "GET"])
 def insert_supercat():
     if request.method == "POST":
@@ -401,6 +422,7 @@ def insert_supercat():
     else:
         return render_template("insert_supercat.html")
 
+## Route que lista todas as sub-categorias da super-categoria inserida
 @app.route("/list_subcat_from_supercat/<super_cat>")
 def list_subcat_from_supercat(super_cat):
 
